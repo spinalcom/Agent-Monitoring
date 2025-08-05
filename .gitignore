@@ -1,0 +1,26 @@
+# Fichiers temporaires
+*.swp
+*.swo
+# Répertoire de modules Node.js
+/node_modules
+
+# Fichiers de logs
+logs/
+*.log
+
+# Fichiers de configuration sensibles
+.env
+config.js
+
+# Fichiers générés par des IDE ou des éditeurs de code
+.vscode/
+.idea/
+
+# Fichiers de build ou de compilation
+/dist
+/build
+
+# Dépendances spécifiques à certaines plateformes
+.DS_Store
+Thumbs.db
+.env

@@ -1,0 +1,19 @@
+{
+    "timestamp": "2025-02-18T13:20:55.083Z",
+    "machineStatus": "ON",
+    "metrics": {
+        "cpuUsage": "0.36",
+        "ramUsage": "50.92%",
+        "totalRam": "16.06 GB",
+        "freeRam": "7.88 GB",
+        "totalDisk": "499.98 GB",
+        "freeDisk": "467.32 GB"
+    },
+    "logs": [
+        "2025-02-18T14:17:24.376547+01:00 sephora-GF75-Thin-9SD code.desktop[6152]: #033[90m[main 2025-02-18T13:17:24.376Z]#033[0m update#setState idle",
+        "2025-02-18T14:20:02.785107+01:00 sephora-GF75-Thin-9SD systemd[1]: Starting sysstat-collect.service - system activity accounting tool...",
+        "2025-02-18T14:20:02.823933+01:00 sephora-GF75-Thin-9SD systemd[1]: sysstat-collect.service: Deactivated successfully.",
+        "2025-02-18T14:20:02.824149+01:00 sephora-GF75-Thin-9SD systemd[1]: Finished sysstat-collect.service - system activity accounting tool.",
+        "2025-02-18T14:20:30.066464+01:00 sephora-GF75-Thin-9SD code.desktop[6152]: [6152:0218/142030.065928:ERROR:atom_cache.cc(230)] Add chromium/from-privileged to kAtomsToCache"
+    ]
+}
