@@ -1,7 +1,7 @@
 import os from "os";
-import path from "path";
+import * as path from "path";
 import configFile from "./classes/ConfigFile";
-const diskusage = require("diskusage");
+import { getDiskInfoSync } from "node-disk-info";
 import { getConfig } from "./config";
 
 const config = configFile;
@@ -36,7 +36,9 @@ export async function getSystemMetrics(): Promise<{
 
     // Informations d'utilisation du disque
     const diskPath = (getConfig() as any).diskPath || path.parse(__dirname).root;
-    const diskInfo = await diskusage.check(diskPath);
+    const disks = getDiskInfoSync();
+    // Cherche le disque correspondant au chemin voulu
+    const diskInfo = disks.find((d: any) => d.mounted === diskPath) || disks[0];
 
     // Retourne les métriques formatées
     return {
@@ -44,9 +46,9 @@ export async function getSystemMetrics(): Promise<{
       ramUsage: ((usedMemory / totalMemory) * 100).toFixed(2) + "%", // Pourcentage d'utilisation RAM
       totalRam: (totalMemory / 1e9).toFixed(2) + " GB", // RAM totale en GB
       freeRam: (freeMemory / 1e9).toFixed(2) + " GB", // RAM libre en GB
-      totalDisk: (diskInfo.total / 1e9).toFixed(2) + " GB", // Disque total en GB
-      freeDisk: (diskInfo.free / 1e9).toFixed(2) + " GB", // Disque libre en GB
-      diskUsage: (((diskInfo.total - diskInfo.free) / diskInfo.total)*100).toFixed(2) + "%", // Pourcentage d'utilisation du disque
+      totalDisk: (diskInfo.blocks * 1024 / 1e9).toFixed(2) + " GB", // Disque total en GB
+      freeDisk: (diskInfo.available * 1024 / 1e9).toFixed(2) + " GB", // Disque libre en GB
+      diskUsage: diskInfo.capacity, // Pourcentage d'utilisation du disque (ex: "23%")
     };
   } catch (error) {
     console.error("Error while fetching system metrics:", error);

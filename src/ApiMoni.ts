@@ -6,7 +6,7 @@ dotenv.config();
 
 // Interface pour les métriques système
 interface SystemMetrics {
-  serverManagerId: "P54zqDnseW3GgQKZsgEV1fmWfjkPRd", // ID spécifique du serveur
+  serverManagerId: string;
   cpuUsage: string;
   ramUsage: string;
   totalRam: string;
@@ -19,11 +19,13 @@ interface SystemMetrics {
 class MonitoringService {
   private readonly baseUrl: string;
   private readonly registerKey: string;
+  private readonly serverManagerId: string;
 
   constructor() {
     this.baseUrl = this.getRequiredEnv('MONITORING_URL');
-    console.log("🔍 URL de monitoring:", this.baseUrl); // Ajoute cette ligne
-    this.registerKey = "bcUlx8KvINZZbGFoiLdh";
+    console.log("🔍 URL de monitoring:", this.baseUrl);
+    this.registerKey = this.getRequiredEnv('REGISTER_KEY');
+    this.serverManagerId = this.getRequiredEnv('SERVER_MANAGER_ID');
   }
   
 
@@ -35,11 +37,11 @@ class MonitoringService {
 
   async sendMetrics(): Promise<void> {
     const metrics = await getSystemMetrics();
-    
+
     const payload = {
       registerKey: this.registerKey,
       infoServer: {
-        serverManagerId: "P54zqDnseW3GgQKZsgEV1fmWfjkPRd", // ID spécifique du serveur
+        serverManagerId: this.serverManagerId,
         timestamp: new Date().toISOString(),
         cpu: parseFloat(metrics.cpuUsage.replace('%', '')),
         ram: parseFloat(metrics.ramUsage.replace('%', '')),

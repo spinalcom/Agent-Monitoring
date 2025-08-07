@@ -31,6 +31,19 @@ import { ConfigFileModel } from "./models/ConfigFileModel";
 import { io } from "socket.io-client";
 import { getSystemMetrics } from './monitoring';
 import { exec } from "child_process";
+// Charge les variables d'environnement depuis le fichier .env à la racine du projet
+import * as dotenv from "dotenv";
+import * as path from "path";
+dotenv.config({ path: path.resolve(__dirname, "../.env") });
+console.log("ENV:", {
+  SPINALHUB_PROTOCOL: process.env.SPINALHUB_PROTOCOL,
+  SPINALHUB_USER_ID: process.env.SPINALHUB_USER_ID,
+  SPINAL_PASSWORD: process.env.SPINAL_PASSWORD,
+  SPINALHUB_IP: process.env.SPINALHUB_IP,
+  SPINALHUB_PORT: process.env.SPINALHUB_PORT,
+});
+
+
 // Récupère l'instance de ConfigFile
 const config = configFile; // ✅ Utilise directement l'instance exportée
 
@@ -50,11 +63,16 @@ async function main() {
   let conn: FileSystem;
 
   // Configuration de la connexion à SpinalCore
-  const protocol = process.env.SPINALHUB_PROTOCOL || "http";
-  const user = process.env.SPINALHUB_USER_ID || "168"; // Valeur par défaut
-  const password = process.env.SPINAL_PASSWORD || "TjN75sjJ455czW"; // Valeur par défaut
-  const host = process.env.SPINALHUB_IP || "127.0.0.1"; // Valeur par défaut
-  const port = process.env.SPINALHUB_PORT || "10100";// Valeur par défaut
+  const protocol = process.env.SPINALHUB_PROTOCOL?.trim();
+  const user = process.env.SPINALHUB_USER_ID?.trim();
+  const password = process.env.SPINAL_PASSWORD?.trim();
+  const host = process.env.SPINALHUB_IP?.trim();
+  const port = process.env.SPINALHUB_PORT?.trim();
+
+  if (!protocol || !user || !password || !host || !port) {
+    console.error('❌ Une ou plusieurs variables d\'environnement SPINALHUB sont manquantes.');
+    return;
+  }
 
   const connect_opt = `${protocol}://${user}:${password}@${host}:${port}/`;
 
