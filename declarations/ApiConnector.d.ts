@@ -13,7 +13,7 @@ export declare class ApiConnector {
      * @return {*}
      * @memberof ApiConnector
      */
-    get<T>(url: string): Promise<import("axios").AxiosResponse<T, any>>;
+    get<T>(url: string): Promise<import("axios").AxiosResponse<T, any, {}>>;
     /**
      *
      * @param {string} url
@@ -21,6 +21,6 @@ export declare class ApiConnector {
      * @return {*}
      * @memberof ApiConnector
      */
-    post(url: string, data: any): Promise<import("axios").AxiosResponse<any, any>>;
-    postAuth(url: string, data: any): Promise<import("axios").AxiosResponse<any, any>>;
+    post(url: string, data: any): Promise<import("axios").AxiosResponse<any, any, {}>>;
+    postAuth(url: string, data: any): Promise<import("axios").AxiosResponse<any, any, {}>>;
 }

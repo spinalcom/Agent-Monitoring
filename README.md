@@ -1,6 +1,1 @@
-# spinal-agent-monitoring.env
-SPINALHUB_PROTOCOL:
-SPINALHUB_USER_ID:
-SPINAL_PASSWORD:
-SPINALHUB_IP:
-SPINALHUB_PORT: 
+# spinal-organ-monitoring

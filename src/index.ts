@@ -25,16 +25,20 @@
 import cron from 'node-cron';
 import os from 'os';
 import { Lst, spinalCore, FileSystem } from "spinal-core-connectorjs";
-import { ConfigFile } from './classes/ConfigFile';
+
 import configFile from './classes/ConfigFile';
-import { ConfigFileModel } from "./models/ConfigFileModel";
+
 import { io } from "socket.io-client";
 import { getSystemMetrics } from './monitoring';
-import { exec } from "child_process";
-// Charge les variables d'environnement depuis le fichier .env à la racine du projet
-import * as dotenv from "dotenv";
+
+import { initProcessWatcher, getProcessList,refreshProcessList } from './process';
+import dotenv from 'dotenv';
 import * as path from "path";
+import { ConfigFileModel } from './models/ConfigFileModel';
+
+// Charge les variables d'environnement depuis le fichier .env à la racine du projet
 dotenv.config({ path: path.resolve(__dirname, "../.env") });
+
 console.log("ENV:", {
   SPINALHUB_PROTOCOL: process.env.SPINALHUB_PROTOCOL,
   SPINALHUB_USER_ID: process.env.SPINALHUB_USER_ID,
@@ -57,6 +61,52 @@ function getMacAddress(): string | undefined {
     }
   }
   return undefined;
+}
+
+// ✅ Mise à jour des métriques système avec processus
+async function updateMetricsFromSystem() {
+  try {
+    // ✅ Vérification que le ConfigFile est initialisé
+    if (!config.isInitialized()) {
+      console.log("⚠️ ConfigFile non initialisé, attente...");
+      return;
+    }
+
+    console.log('🔄 Récupération des métriques et processus...');
+    
+    const metrics = await getSystemMetrics();
+    
+    // ✅ CORRECTION: Actualiser d'abord la liste PM2 SANS récupérer les données formatées
+    await refreshProcessList();
+    
+    const macAddress = getMacAddress(); // ✅ Récupère l'adresse MAC
+
+    // ✅ Ajoute l'adresse MAC aux métriques
+    const metricsWithMac = {
+      ...metrics,
+      macAddress: macAddress || 'unknown'
+    };
+
+    // ✅ CORRECTION: Mettre à jour SEULEMENT les métriques, PAS les processus
+    config.updateMetrics(metricsWithMac);
+    
+    // ✅ Pour l'affichage seulement, récupérer les données formatées
+    const Pm2Processes = await getProcessList();
+    
+    console.log('📊 Métriques et processus mis à jour dans ConfigFile:', {
+      ...metricsWithMac,
+      processCount: Pm2Processes.length
+    });
+    
+    // ✅ Log des processus pour debug
+    console.log(`📋 ${Pm2Processes.length} processus PM2 disponibles:`);
+    Pm2Processes.forEach(proc => {
+      console.log(`  - ${proc.name} (ID: ${proc.pm2_id}, PID: ${proc.pid}, Status: ${proc.status})`);
+    });
+    
+  } catch (error) {
+    console.error("❌ Erreur lors de la récupération des métriques :", error);
+  }
 }
 
 async function main() {
@@ -82,71 +132,70 @@ async function main() {
     console.log('✅ Connexion à SpinalCore établie avec succès !');
   } catch (error) {
     console.error('❌ Erreur lors de la connexion à SpinalCore :', error);
-    return; // Arrête l'exécution si la connexion échoue
+    return;
   }
 
-  // Connecte-toi à ton serveur API Socket.IO
-const socket = io("http://146.59.157.197:3001"); // adapte l’URL si le serveur est distant
+  // ✅ Connecte-toi à ton serveur API Socket.IO
+  const socket = io("http://146.59.157.197:3001");
 
-// Quand l'agent est connecté
+  socket.on("connect", () => {
+    console.log("Agent connecté !");
+    const macAddress = getMacAddress();
+    if (!macAddress) {
+      console.error("❌ Impossible de récupérer l'adresse MAC. Abandon.");
+      return;
+    }
 
-socket.on("connect", () => {
-  console.log("Agent connecté !");
-  const macAddress = getMacAddress();
-if (!macAddress) {
-  console.error("❌ Impossible de récupérer l'adresse MAC. Abandon.");
-  return;
-}
+    socket.emit("register-agent", { serverId: macAddress });
+    console.log("📡 Agent enregistré avec serverID =", macAddress);
+  });
 
-socket.emit("register-agent", { serverId: macAddress });
-console.log("📡 Agent enregistré avec serverID =", macAddress);
-
-});
-  // Initialisation du fichier de configuration
+  // ✅ Initialisation du fichier de configuration
   async function initializeConfigFile() {
     try {
       console.log('🔄 Initialisation du fichier de configuration...');
-      const hostname = os.hostname(); // nom de la machine locale
-      const fileName = `VM_MONITORING_${hostname}`; // Nom unique par machine
+      const hostname = os.hostname();
+      const fileName = `VM_MONITORING_${hostname}`;
+      
+      // ✅ Nouveau chemin : /etc/Organs/Monitoring/
+      const filePath = `/etc/Organs/Monitoring/${fileName}`;
 
       await config.init(
-        conn,                 // Connexion SpinalCore
-        fileName,      // Nom du fichier
-        'VM Monitoring Agent',// Type d'agent
-        'Bare4',     // Nom du serveur
-          8080                 // Port
+        conn,
+        filePath,
+        'VM Monitoring Agent',
+        'Bare4',
+        8080
       );
-      console.log('✅ ConfigFile  initialisé avec succès !', fileName);
+      
+      console.log('✅ ConfigFile initialisé avec succès !', filePath);
+      
+      // ✅ Initialise le ProcessWatcher après l'initialisation avec la bonne méthode
+      const model = config.getValidatedModel();
+      initProcessWatcher(model);
+      console.log('✅ ProcessWatcher initialisé avec le modèle');
+      
     } catch (error) {
-      console.error('❌ Erreur lors de l\'initialisation du fichier de configuration :', error);
+      console.error("❌ Erreur lors de l'initialisation:", error);
     }
   }
 
-  // Mise à jour des métriques système
-  async function updateMetricsFromSystem() {
-    try {
-      const metrics = await getSystemMetrics(); // Récupère les métriques
-      const macAddress = getMacAddress();
-      const metricsWithMac = { ...metrics, macAddress }; // Ajoute la MAC
-
-      config.updateMetrics(metricsWithMac); // Met à jour les métriques dans ConfigFile
-      console.log('📊 Métriques mises à jour :', metricsWithMac);
-    } catch (error) {
-      console.error("❌ Erreur lors de la récupération des métriques :", error);
-    }
-  }
-
-  // Initialisation du fichier de configuration
+  // Initialisation
   await initializeConfigFile();
 
-  // Mise à jour des métriques toutes les 30 secondes
-  setInterval(updateMetricsFromSystem, 30 * 1000);
+  // ✅ Première mise à jour immédiate
+  setTimeout(async () => {
+    console.log('🚀 Première mise à jour des données...');
+    await updateMetricsFromSystem();
+  }, 3000);
 
-  // Optionnel : Utilisation de node-cron pour des tâches planifiées
+  // ✅ Cron job pour les mises à jour périodiques
   cron.schedule('*/1 * * * *', async () => {
     console.log('⏰ Exécution de la tâche planifiée...');
     await updateMetricsFromSystem();
   });
+
+  console.log('🎯 Agent de monitoring initialisé - contrôle via ConfigFile uniquement');
 }
 
 // Lancement du programme
